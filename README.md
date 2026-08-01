@@ -87,14 +87,45 @@ WorkerBot/
 - A Discord bot that forwards messages to the n8n webhook
 - An Obsidian vault directory mounted/accessible at `/vault` in the n8n container
 
+### Configuration placeholders
+
+The exported workflow JSON has all secrets and personal values replaced with placeholders. You need to fill these in after importing:
+
+| Placeholder | Where | What to enter |
+|---|---|---|
+| `YOUR_WEBHOOK_PATH` | Webhook node → Path | The path segment for your n8n webhook (e.g. `my-workerbot`). n8n generates this when you create the node, or you can set a custom one. |
+| `YOUR_WEBHOOK_ID` | Webhook node, Discord Reject, Discord Reply, Discord Output → webhookId | n8n auto-fills these when you configure each node — just re-select your webhook/credentials in the UI. |
+| `YOUR_DISCORD_USERNAME` | If node → rightValue | Your Discord username (the one the bot should respond to). Everyone else gets rejected. |
+| `YOUR_CREDENTIAL_ID` | OpenAI Chat Model node → credentials → id | Created automatically when you add an "OpenAI API" credential in n8n. Set the **Base URL** to your llama.cpp server (e.g. `http://192.168.1.50:8080/v1`) and leave the API key blank or set a dummy value. |
+| `YOUR_WORKFLOW_ID` | Every tool-workflow node (Docker Update, Haveli Camera Snapshot, Electricity Check, Vault: List/Glob/Grep/Read/Edit/Write/Append) → workflowId | The ID of each sub-workflow you create in n8n. After creating a sub-workflow, open the tool node in WorkerBot and select it from the dropdown. |
+
+### Discord credentials
+
+The workflow uses three Discord webhook credentials for sending messages back. In n8n:
+
+1. Go to **Credentials → Add Credential → Discord Webhook API**.
+2. Paste your Discord channel webhook URL (from Discord → Channel Settings → Integrations → Webhooks).
+3. Assign the credential to the **Discord Reject**, **Discord Reply**, and **Discord Output** nodes.
+
+### LLM configuration
+
+The OpenAI Chat Model node is configured to use a local llama.cpp server with the OpenAI-compatible API. To set this up:
+
+1. In n8n, create an **OpenAI API** credential.
+2. Set the **Base URL** to your llama.cpp server's address (e.g. `http://localhost:8080/v1` or `http://<LAN-IP>:8080/v1`).
+3. The **API Key** can be any non-empty string (llama.cpp doesn't validate it, but n8n requires the field).
+4. In the OpenAI Chat Model node, set the **Model** to your GGUF filename (e.g. `qwen2.5-1.5b-instruct-q4_k_m.gguf`).
+
 ### Steps
 
 1. Import `workflows/WorkerBot.json` into n8n.
 2. Create the seven vault tool sub-workflows in n8n. Each one uses "When executed by another workflow" as the trigger and a single Code node — paste the corresponding `.js` file from `workflows/tools/`.
-3. Point the tool-workflow nodes in WorkerBot at the sub-workflows you created.
-4. Configure the OpenAI Chat Model node to point at your llama.cpp server.
-5. Set up a Discord bot (e.g. using [discord.js](https://discord.js.org/)) to forward messages to the webhook URL.
-6. Activate the workflow.
+3. Open each tool-workflow node in WorkerBot and select the sub-workflow you just created from the dropdown (this fills in the workflow ID).
+4. Configure the OpenAI Chat Model credential and node (see above).
+5. Configure the three Discord webhook credentials (see above).
+6. Set your Discord username in the If node's condition.
+7. Set up a Discord bot (e.g. using [discord.js](https://discord.js.org/)) to forward messages to the n8n webhook URL.
+8. Activate the workflow.
 
 ## License
 
