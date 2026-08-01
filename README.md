@@ -32,8 +32,8 @@ The agent has access to 11 tools, each implemented as a separate n8n sub-workflo
 | Tool | Description |
 |------|-------------|
 | **Docker Update** | SSHes into the homelab server and runs `docker compose pull && docker compose up -d --build` for a set of containers |
-| **Camera Snapshot** | Grabs a still frame from a local network camera using ffmpeg and sends it to Discord |
-| **Electricity Check** | Pings a device on the network that has no backup power supply — if it responds, electricity is up; if not, it's out |
+| **[Camera Snapshot](https://github.com/Rorailer/Camera-Snapshot)** | Grabs a still frame from a local network camera using ffmpeg and sends it to Discord |
+| **[Electricity Check](https://github.com/Rorailer/Electricity-Check)** | Pings a device on the network that has no backup power supply — if it responds, electricity is up; if not, it's out |
 | **Discord Reply** | Send the final response back to Discord |
 
 ## Design decisions
