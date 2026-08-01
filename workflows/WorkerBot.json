@@ -61,7 +61,7 @@
     },
     {
       "parameters": {
-        "description": "This tool updates docker containers (containers include sonarr, radarr, bazarr, prowlarr, jellyfin, qbittorrent, speedtesttracker (myspeed) and jellyseerr)",
+        "description": "SSHes into the homelab server and runs docker compose pull && docker compose up -d --build for a set of containers.",
         "workflowId": {
           "__rl": true,
           "value": "YOUR_WORKFLOW_ID",
@@ -111,12 +111,12 @@
     },
     {
       "parameters": {
-        "description": "Takes a snapshot from a camera installed at \"Haveli\" and sends it to Discord.",
+        "description": "Grabs a still frame from a local network camera using ffmpeg and sends it to Discord.",
         "workflowId": {
           "__rl": true,
           "value": "YOUR_WORKFLOW_ID",
           "mode": "list",
-          "cachedResultName": "Haveli Camera Snapshot"
+          "cachedResultName": "Camera Snapshot"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -131,7 +131,7 @@
       "typeVersion": 2.2,
       "position": [560, 224],
       "id": "0a2226d2-fbc0-4802-8d1d-5edaf25645ce",
-      "name": "Haveli Camera Snapshot"
+      "name": "Camera Snapshot"
     },
     {
       "parameters": {
@@ -148,7 +148,7 @@
     },
     {
       "parameters": {
-        "description": "Check if power (electricity) is on or out.",
+        "description": "Pings a device on the local network that has no backup power supply. If it responds, electricity is up; if not, power is out.",
         "workflowId": {
           "__rl": true,
           "value": "YOUR_WORKFLOW_ID",
@@ -430,7 +430,7 @@
     "Discord Reply": {
       "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
     },
-    "Haveli Camera Snapshot": {
+    "Camera Snapshot": {
       "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
     },
     "Electricity Check": {

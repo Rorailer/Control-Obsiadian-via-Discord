@@ -31,9 +31,9 @@ The agent has access to 11 tools, each implemented as a separate n8n sub-workflo
 
 | Tool | Description |
 |------|-------------|
-| **Docker Update** | Pull and restart media stack containers (Jellyfin, Sonarr, Radarr, Bazarr, Prowlarr, qBittorrent, MySpeed, Jellyseerr) |
-| **Haveli Camera** | Grab a snapshot from a security camera and send it to Discord |
-| **Electricity Check** | Check whether mains power is currently on or out |
+| **Docker Update** | SSHes into the homelab server and runs `docker compose pull && docker compose up -d --build` for a set of containers |
+| **Camera Snapshot** | Grabs a still frame from a local network camera using ffmpeg and sends it to Discord |
+| **Electricity Check** | Pings a device on the network that has no backup power supply — if it responds, electricity is up; if not, it's out |
 | **Discord Reply** | Send the final response back to Discord |
 
 ## Design decisions
@@ -97,7 +97,7 @@ The exported workflow JSON has all secrets and personal values replaced with pla
 | `YOUR_WEBHOOK_ID` | Webhook node, Discord Reject, Discord Reply, Discord Output → webhookId | n8n auto-fills these when you configure each node — just re-select your webhook/credentials in the UI. |
 | `YOUR_DISCORD_USERNAME` | If node → rightValue | Your Discord username (the one the bot should respond to). Everyone else gets rejected. |
 | `YOUR_CREDENTIAL_ID` | OpenAI Chat Model node → credentials → id | Created automatically when you add an "OpenAI API" credential in n8n. Set the **Base URL** to your llama.cpp server (e.g. `http://192.168.1.50:8080/v1`) and leave the API key blank or set a dummy value. |
-| `YOUR_WORKFLOW_ID` | Every tool-workflow node (Docker Update, Haveli Camera Snapshot, Electricity Check, Vault: List/Glob/Grep/Read/Edit/Write/Append) → workflowId | The ID of each sub-workflow you create in n8n. After creating a sub-workflow, open the tool node in WorkerBot and select it from the dropdown. |
+| `YOUR_WORKFLOW_ID` | Every tool-workflow node (Docker Update, Camera Snapshot, Electricity Check, Vault: List/Glob/Grep/Read/Edit/Write/Append) → workflowId | The ID of each sub-workflow you create in n8n. After creating a sub-workflow, open the tool node in WorkerBot and select it from the dropdown. |
 
 ### Discord credentials
 
