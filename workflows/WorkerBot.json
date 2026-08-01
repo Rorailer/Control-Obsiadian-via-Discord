@@ -1,0 +1,476 @@
+{
+  "name": "WorkerBot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_WEBHOOK_PATH",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-496, 0],
+      "id": "0b7111ef-5f9c-4742-8162-57c6a7d0a963",
+      "name": "Webhook",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "652a1024-64b5-4f96-9f5c-fa4e4df92140",
+              "leftValue": "={{ $json.body.author.username }}",
+              "rightValue": "YOUR_DISCORD_USERNAME",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-272, 0],
+      "id": "49160157-3bb6-4405-bac5-33a74080d071",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.original_message.cleanContent }} ; Date: {{ $now.toISO() }} ; Map: {{ $json.vault_map }}",
+        "options": {
+          "systemMessage": "You are a focused vault assistant for Obsidian + a homelab toolbelt. Your hardest constraint is **iteration efficiency**: you have a 10-call hard limit.\n  Plan for 1\u20133 calls per request.\n\n  ## Input format\n  \n  Every user message you receive is structured as:\n\n    <user message> ; Date <YYYY-MM-DD ISO> ; MAP : <vault tree>\n\n  - `<user message>` \u2014 what the user asked.\n  - `Date` \u2014 today's date. Use this for any date in note paths or appended content. Never guess the date.\n  - `MAP` \u2014 a live tree of every folder and `.md` file in the vault. **This is your file-system index.** Consult it before calling any discovery tool.\n\n  ## Iteration budget rules (read first, every time)\n\n  1. **Use the MAP, don't discover.** If the file you need is in the MAP, go straight to vault_append / vault_read / vault_edit / vault_write with the exact\n   path. NEVER call vault_list / vault_glob / vault_grep just to \"find\" a file that's already visible in the MAP.\n  2. **Discovery tools only when the user explicitly asks** to find/search/list, or when a direct attempt against a path FAILS.\n  3. **No progress messages via Discord during vault ops.** One final Discord reply at the end. Don't call the Discord tool between vault calls.\n  4. **One shot, then commit.** Pick the most likely path on your first try (using the MAP). If it fails, try ONE recovery, then either succeed or report\n  the failure.\n  5. **Append > Edit.** If the user is adding new content (idea / expense / journal / todo / capture), use vault_append. One call. It creates the file if\n  missing \u2014 don't read first.\n  6. **Edit only requires read once.** If you must use vault_edit on a file you have not already seen this turn, call vault_read once, then vault_edit. Two\n  calls total. Don't re-read after editing to \"verify\".\n  7. **Discord only at the end.** Single message summarizing what you did. (Docker container ops still get the \"\u23f3 Processing...\" wait message at the start\n  \u2014 that rule stays.)\n\n  ## Tool decision tree\n  \n  User wants to ADD content to a known kind of note (ideas / inbox / journal / expense / quick-capture):\n    \u2192 check MAP for the canonical file \u2192 vault_append directly. ONE call. Done.\n\n  User wants to MODIFY an existing line / table / checkbox / heading content:\n    \u2192 check MAP \u2192 vault_read (1) \u2192 vault_edit with unique old_string (1). TWO calls.\n\n  User wants to CREATE a brand-new note:\n    \u2192 vault_write directly with a sensible path. ONE call.\n\n  User wants to FIND / WHERE did I write X / SEARCH for X:\n    \u2192 vault_grep with the keyword. ONE call.\n\n  User wants to LIST contents of folder Y:\n    \u2192 MAP already shows it; just read from MAP and answer. Zero calls. Use vault_list only if MAP doesn't include hidden subfolders the user is asking\n  about.\n\n  Anything else (vault topic but unclear): one best-guess attempt; on failure, ask the user to clarify rather than burning iterations exploring.\n\n  ## Path conventions (use the MAP as ground truth, but expect these patterns)\n\n  - Daily journal: `Daily/<Date>.md`  (substitute the Date from the user message)\n  - Monthly budget / finance: `Finance/<Date's YYYY-MM>.md`\n  - Quick captures: `Inbox.md`\n  - Ideas: `My-Ideas.md` (or whatever the MAP shows under that name)\n\n  If a path you're guessing isn't in the MAP and the user wants to ADD content there, that's fine \u2014 vault_append will create the file. If they want to\n  MODIFY content there, you have a problem (file doesn't exist) \u2014 tell the user.\n\n  ## Edit rules (so vault_edit works first try)\n\n  - old_string must match EXACTLY: same whitespace, same indentation, same punctuation, no truncation.\n  - Make old_string unique by including 1\u20132 lines of surrounding context. A bare \"- todo\" repeats many times; \"- todo: pay rent\" is usually unique.\n  - Inserting (table row, bullet under heading): old_string = the line you keep, new_string = that same line + \"\\n\" + new content.\n  - Deleting: new_string = \"\".\n  - On \"old_string not found\" or \"appears N times\": ONE retry with a fresh vault_read and tighter context. After that, give up and tell the user.\n\n  ## Other rules\n\n  - Docker container ops: send \"\u23f3 Processing your Docker request, please wait...\" via Discord at the start, then proceed.\n  - Always include the Date (from the user message) in any content you append, unless the user explicitly said not to.\n  - Be concise and direct. No filler. No exploring \"to be safe.\"\n  - One Discord message at the end summarizing what changed (e.g. \"Added 450 (groceries) to Finance/2026-05.md\").\n  - If a tool fails and you can't recover in one retry, tell the user clearly what failed and where.\n",
+          "maxIterations": 20
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [808, 0],
+      "id": "fa44acd0-5e6d-4576-aa39-1d65f196cd83",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "description": "This tool updates docker containers (containers include sonarr, radarr, bazarr, prowlarr, jellyfin, qbittorrent, speedtesttracker (myspeed) and jellyseerr)",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "update jellyfin, sonarr, qbittorrent, speedtesttracker"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [304, 224],
+      "id": "743bcc73-1752-4915-a7b6-b33ba4871164",
+      "name": "Docker Update"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "I just dumb dude, what did you ask again??",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [-496, 552],
+      "id": "470dde47-b12e-4b57-9a67-052451fccfe0",
+      "name": "Discord Reject",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discordTool",
+      "typeVersion": 2,
+      "position": [432, 224],
+      "id": "69c2262b-8f4e-49d0-9514-7b24470ae524",
+      "name": "Discord Reply",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "description": "Takes a snapshot from a camera installed at \"Haveli\" and sends it to Discord.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Haveli Camera Snapshot"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [560, 224],
+      "id": "0a2226d2-fbc0-4802-8d1d-5edaf25645ce",
+      "name": "Haveli Camera Snapshot"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [-496, 328],
+      "id": "96679ed1-7ea7-4938-a5a5-21b77dec8544",
+      "name": "Discord Output",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "description": "Check if power (electricity) is on or out.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "SUB Electricity?"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [688, 224],
+      "id": "04b0a2d0-7669-4ec9-a452-0d163323b335",
+      "name": "Electricity Check"
+    },
+    {
+      "parameters": {
+        "description": "List files and folders inside the Obsidian vault. Inputs: folder (relative path, optional, default = root), recursive (bool, optional, default false).",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: List"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recursive": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "folder", "displayName": "folder", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "recursive", "displayName": "recursive", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "boolean", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [816, 224],
+      "id": "342aed8c-8247-4c64-a257-422c0055b61d",
+      "name": "Vault: List"
+    },
+    {
+      "parameters": {
+        "description": "Find files in the vault matching a glob pattern (e.g. 'Daily/2026-05-*.md', '**/Budget*.md'). Returns matching paths.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: Glob"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": ["pattern"],
+          "schema": [
+            { "id": "pattern", "displayName": "pattern", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [944, 224],
+      "id": "25f3a0e9-2268-4a71-813f-dcb698202f11",
+      "name": "Vault: Glob"
+    },
+    {
+      "parameters": {
+        "description": "Search for text across notes in the vault. Returns matching path + line number + line snippet.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: Grep"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_sensitive": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('case_sensitive', ``, 'boolean') }}",
+            "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('query', ``, 'string') }}",
+            "path": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('path', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "query", "displayName": "query", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "path", "displayName": "path", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "case_sensitive", "displayName": "case_sensitive", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "boolean", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1072, 224],
+      "id": "da76a360-efd2-4eac-99e6-398cea43e741",
+      "name": "Vault: Grep"
+    },
+    {
+      "parameters": {
+        "description": "Read the contents of a markdown note from the vault. Optional start_line / end_line to read a slice (1-indexed, inclusive).",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: Read"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "start_line": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_line', ``, 'number') }}",
+            "end_line": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_line', ``, 'number') }}",
+            "path": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('path', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "path", "displayName": "path", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "start_line", "displayName": "start_line", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "number", "removed": false },
+            { "id": "end_line", "displayName": "end_line", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "number", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1200, 224],
+      "id": "76e89517-0db1-4f37-9f1f-e8ecf900a3f0",
+      "name": "Vault: Read"
+    },
+    {
+      "parameters": {
+        "description": "Replace exact text inside a markdown note. The old_string must match exactly and be unique unless replace_all=true. Use vault_read first to see the file, then vault_edit.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: Edit"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "replace_all": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "path", "displayName": "path", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "old_string", "displayName": "old_string", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "new_string", "displayName": "new_string", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "replace_all", "displayName": "replace_all", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "boolean", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1328, 224],
+      "id": "49f6abb7-9fd9-4f20-96d6-968c76caeae4",
+      "name": "Vault: Edit"
+    },
+    {
+      "parameters": {
+        "description": "Create a new markdown note or overwrite an existing one. For modifying part of an existing note, prefer vault_edit. Pass overwrite=true to replace an existing file.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: Write"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "overwrite": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('overwrite', ``, 'boolean') }}",
+            "path": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('path', ``, 'string') }}",
+            "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('content', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "path", "displayName": "path", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "content", "displayName": "content", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "overwrite", "displayName": "overwrite", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "boolean", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1456, 224],
+      "id": "740e20dc-66d3-4f48-86d6-501b45a9d5c2",
+      "name": "Vault: Write"
+    },
+    {
+      "parameters": {
+        "description": "Append text to the end of a markdown note (creates the file if it doesn't exist). Best for adding ideas, journal entries, inbox captures, expense lines, todos.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Vault: Append"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            { "id": "path", "displayName": "path", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false },
+            { "id": "text", "displayName": "text", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string", "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1584, 224],
+      "id": "8714c0b3-2c61-41bb-9464-a61f91ad2f0c",
+      "name": "Vault: Append"
+    },
+    {
+      "parameters": {
+        "jsCode": "// See workflows/tools/vault-map.js for the standalone version.\nconst fs = require('fs');\nconst path = require('path');\nconst root = '/vault';\n\nfunction walk(dir, depth = 0) {\n  const out = [];\n  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {\n    if (e.name.startsWith('.')) continue;\n    const full = path.join(dir, e.name);\n    const indent = '  '.repeat(depth);\n    if (e.isDirectory()) {\n      out.push(`${indent}- ${e.name}/`);\n      out.push(...walk(full, depth + 1));\n    } else if (e.isFile() && e.name.endsWith('.md')) {\n      out.push(`${indent}- ${e.name}`);\n    }\n  }\n  return out;\n}\n\nreturn [{ json: {\n  ...$input.first().json,\n  vault_map: walk(root).join('\\n'),\n  today: new Date().toISOString().slice(0, 10)\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-48, 0],
+      "id": "e7b4f321-ff53-4215-962b-63dc74853ab5",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "=qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "mode": "id"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [176, 224],
+      "id": "3b5e52ab-02ac-4178-a8e4-eb82cb7b0d0e",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "llama.cpp"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "If", "type": "main", "index": 0 }]]
+    },
+    "If": {
+      "main": [
+        [{ "node": "Code in JavaScript", "type": "main", "index": 0 }]
+      ]
+    },
+    "Docker Update": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "AI Agent": {
+      "main": [[]]
+    },
+    "Discord Reply": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Haveli Camera Snapshot": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Electricity Check": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: List": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: Glob": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: Grep": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: Read": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: Edit": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: Write": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Vault: Append": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Code in JavaScript": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
